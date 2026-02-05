@@ -225,7 +225,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="text-xs text-zinc-500 mt-8">
-        © {new Date().getFullYear()} Barcode Generator
+        © {new Date().getFullYear()} Santeri Pikkarainen
       </footer>
     </main>
   );

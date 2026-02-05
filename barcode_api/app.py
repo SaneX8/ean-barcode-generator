@@ -34,9 +34,9 @@ PRESETS = {
     "6": {"per_row": 6, "col_width": 32 * mm},
 }
 
-BAR_HEIGHT = 15 * mm
-BAR_WIDTH = 0.34
-PER_FILE = 50
+BAR_HEIGHT = 15 * mm;
+BAR_WIDTH = 0.34;
+PER_FILE = 50;
 
 
 def make_barcode(code):
