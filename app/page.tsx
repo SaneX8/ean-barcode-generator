@@ -7,7 +7,7 @@ export default function Home() {
   const [preset, setPreset] = useState("4");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
 
   const dark = theme === "dark";
 
@@ -88,9 +88,20 @@ export default function Home() {
           dark ? "text-white" : "text-zinc-800"
         }`}
       >
-        <div className="flex items-center gap-2 font-semibold">
-          📦
-          <span>EAN Generator</span>
+        <div className="flex items-center gap-3 font-semibold">
+          📦 <span>EAN Generator</span>
+          <a
+            href="https://santeripikkarainen.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`ml-3 text-xs px-3 py-1 rounded-full border transition ${
+              dark
+                ? "border-zinc-600 hover:bg-zinc-800"
+                : "border-zinc-300 hover:bg-zinc-200"
+            }`}
+          >
+            ← Portfolio
+          </a>
         </div>
 
         <button
