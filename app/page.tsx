@@ -1,65 +1,232 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [codes, setCodes] = useState("");
+  const [preset, setPreset] = useState("4");
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  const dark = theme === "dark";
+
+  async function generate() {
+    if (!codes.trim()) {
+      alert("No EAN codes!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ codes, preset }),
+        },
+      );
+
+      if (!res.ok) {
+        const txt = await res.text();
+        alert("Backend error: " + txt);
+        setLoading(false);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "barcodes.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setToast("PDF ready ✓");
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      alert("Could not connect to backend!");
+      console.error(err);
+    }
+
+    setLoading(false);
+  }
+
+  function clearCodes() {
+    setCodes("");
+  }
+
+  function handleFileUpload(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text
+        .split(/[\n,;]/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      setCodes(lines.join("\n"));
+    };
+    reader.readAsText(file);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main
+      className={`min-h-screen flex flex-col items-center justify-between p-4 transition-colors ${
+        dark
+          ? "bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 text-white"
+          : "bg-zinc-100 text-zinc-900"
+      }`}
+    >
+      {/* TOP BAR */}
+      <div
+        className={`w-full max-w-xl flex items-center justify-between px-2 py-2 ${
+          dark ? "text-white" : "text-zinc-800"
+        }`}
+      >
+        <div className="flex items-center gap-2 font-semibold">
+          📦
+          <span>EAN Generator</span>
+        </div>
+
+        <button
+          onClick={() => setTheme(dark ? "light" : "dark")}
+          className={`px-3 py-1 rounded-lg border ${
+            dark
+              ? "border-zinc-600 hover:bg-zinc-800"
+              : "border-zinc-300 hover:bg-white"
+          }`}
+        >
+          {dark ? "☀ Light" : "🌙 Dark"}
+        </button>
+      </div>
+
+      {/* CARD */}
+      <div
+        className={`w-full max-w-xl backdrop-blur rounded-2xl shadow-2xl border p-6 md:p-8 mt-4 transition-colors ${
+          dark ? "bg-zinc-900/80 border-zinc-700" : "bg-white border-zinc-300"
+        }`}
+      >
+        {/* HEADER */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            EAN Barcode Generator
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p
+            className={`text-sm mt-1 ${
+              dark ? "text-zinc-400" : "text-zinc-600"
+            }`}
+          >
+            Generate printable barcode sheets from EAN codes.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* PRESET */}
+        <div className="mb-4">
+          <label className="block text-sm mb-1">Layout preset</label>
+          <select
+            value={preset}
+            onChange={(e) => setPreset(e.target.value)}
+            className={`w-full rounded-lg border p-2 ${
+              dark ? "bg-zinc-950 border-zinc-700" : "bg-white border-zinc-300"
+            }`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <option value="4">A4 – 4 per row (standard)</option>
+            <option value="3">A4 – 3 per row (large)</option>
+            <option value="6">A4 – 6 per row (compact)</option>
+          </select>
         </div>
-      </main>
-    </div>
+
+        {/* FILE UPLOAD */}
+        <div className="mb-4">
+          <label className="block text-sm mb-1">Upload CSV / TXT</label>
+
+          <div className="flex items-center gap-3">
+            <label
+              className={`cursor-pointer px-4 py-2 rounded-lg border text-sm font-medium transition ${
+                dark
+                  ? "bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+                  : "bg-white border-zinc-300 hover:bg-zinc-100"
+              }`}
+            >
+              Choose file
+              <input
+                type="file"
+                accept=".csv,.txt"
+                className="hidden"
+                onChange={(e) =>
+                  e.target.files && handleFileUpload(e.target.files[0])
+                }
+              />
+            </label>
+
+            <span className="text-xs text-zinc-400">
+              {codes ? "Loaded" : "No file selected"}
+            </span>
+          </div>
+        </div>
+
+        {/* TEXTAREA */}
+        <div className="mb-5">
+          <label className="block text-sm mb-1">EAN codes (one per line)</label>
+          <textarea
+            className={`w-full h-56 rounded-xl border p-3 font-mono text-sm resize-none ${
+              dark ? "bg-zinc-950 border-zinc-700" : "bg-white border-zinc-300"
+            }`}
+            placeholder={`6415712400071
+7340191139510
+6408110004729`}
+            value={codes}
+            onChange={(e) => setCodes(e.target.value)}
+          />
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex gap-3">
+          <button
+            onClick={generate}
+            disabled={loading}
+            className={`flex-1 py-3 rounded-xl font-medium text-lg flex items-center justify-center gap-2 transition ${
+              dark
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+          >
+            {loading && (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            )}
+            {loading ? "Generating…" : "Generate PDF"}
+          </button>
+
+          <button
+            onClick={clearCodes}
+            disabled={loading || !codes}
+            className={`px-4 rounded-xl border ${
+              dark
+                ? "border-zinc-600 hover:bg-zinc-800"
+                : "border-zinc-300 hover:bg-zinc-200"
+            }`}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div className="fixed bottom-20 bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      {/* FOOTER */}
+      <footer className="text-xs text-zinc-500 mt-8">
+        © {new Date().getFullYear()} Barcode Generator
+      </footer>
+    </main>
   );
 }
