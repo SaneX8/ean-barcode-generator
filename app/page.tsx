@@ -92,8 +92,6 @@ export default function Home() {
           📦 <span>EAN Generator</span>
           <a
             href="https://santeripikkarainen.com"
-            target="_blank"
-            rel="noopener noreferrer"
             className={`ml-3 text-xs px-3 py-1 rounded-full border transition ${
               dark
                 ? "border-zinc-600 hover:bg-zinc-800"
