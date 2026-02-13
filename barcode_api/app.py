@@ -29,14 +29,16 @@ num_style = ParagraphStyle(
 )
 
 PRESETS = {
-    "4": {"per_row": 4, "col_width": 50 * mm},
-    "3": {"per_row": 3, "col_width": 65 * mm},
-    "6": {"per_row": 6, "col_width": 32 * mm},
+    "4": {"per_row": 4, "col_width": 55 * mm},
+    "3": {"per_row": 3, "col_width": 70 * mm},
+    "6": {"per_row": 6, "col_width": 35 * mm},
 }
 
-BAR_HEIGHT = 15 * mm;
-BAR_WIDTH = 0.34;
-PER_FILE = 50;
+# 🔥 GS1 STANDARD SETTINGS (100% magnification)
+X_DIMENSION = 0.33 * mm     # kapein viiva
+BAR_HEIGHT = 23 * mm        # min standard height
+QUIET_ZONE = 4 * mm         # min 3.63mm -> käytetään 4mm varman päälle
+PER_FILE = 50
 
 
 def make_barcode(code):
@@ -47,17 +49,21 @@ def make_barcode(code):
     else:
         raise ValueError(code)
 
-    widget.humanReadable = False
+    widget.humanReadable = True
     widget.barHeight = BAR_HEIGHT
-    widget.barWidth = BAR_WIDTH
+    widget.barWidth = X_DIMENSION
+    widget.quiet = True
 
-    b = widget.getBounds()
-    d = Drawing(b[2] - b[0], b[3] - b[1])
-    d.add(widget)
+    bounds = widget.getBounds()
+    width = bounds[2] - bounds[0]
+    height = bounds[3] - bounds[1]
+
+    drawing = Drawing(width + QUIET_ZONE * 2, height)
+    drawing.add(widget)
 
     return [
-        d,
-        Spacer(1, 8),
+        drawing,
+        Spacer(1, 6),
         Paragraph(code, num_style),
     ]
 
@@ -74,7 +80,7 @@ def generate():
     if not codes:
         return jsonify({"error": "No codes"}), 400
 
-    preset = PRESETS[preset_key]
+    preset = PRESETS.get(preset_key, PRESETS["4"])
     PER_ROW = preset["per_row"]
     COL_WIDTH = preset["col_width"]
 
@@ -83,13 +89,13 @@ def generate():
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=10 * mm,
-        rightMargin=10 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
+        leftMargin=15 * mm,
+        rightMargin=15 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
     )
 
-    parts = [codes[i : i + PER_FILE] for i in range(0, len(codes), PER_FILE)]
+    parts = [codes[i: i + PER_FILE] for i in range(0, len(codes), PER_FILE)]
     flow = []
 
     for idx, part in enumerate(parts, 1):
@@ -109,12 +115,14 @@ def generate():
 
         table.setStyle(
             TableStyle([
-                ("ALIGN",(0,0),(-1,-1),"CENTER"),
-                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-                ("LEFTPADDING",(0,0),(-1,-1),8),
-                ("RIGHTPADDING",(0,0),(-1,-1),8),
-                ("TOPPADDING",(0,0),(-1,-1),10),
-                ("BOTTOMPADDING",(0,0),(-1,-1),18),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+                # Extra padding ettei quiet zone leikkaannu
+                ("LEFTPADDING", (0, 0), (-1, -1), 15),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 15),
+                ("TOPPADDING", (0, 0), (-1, -1), 15),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 20),
             ])
         )
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [codes, setCodes] = useState("");
@@ -11,6 +11,12 @@ export default function Home() {
 
   const dark = theme === "dark";
 
+  useEffect(() => {
+    document.title = loading
+      ? "⏳ Generating PDF..."
+      : "EAN Barcode Generator | Santeri Pikkarainen";
+  }, [loading]);
+
   async function generate() {
     if (!codes.trim()) {
       alert("No EAN codes!");
@@ -19,21 +25,50 @@ export default function Home() {
 
     setLoading(true);
 
+    // Clean + remove empty
+    const cleanedCodes = codes
+      .split("\n")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    // Remove duplicates
+    const uniqueCodes = Array.from(new Set(cleanedCodes));
+
+    // Validate EAN-13 (exactly 13 digits)
+    const validCodes = uniqueCodes.filter((code) => /^\d{13}$/.test(code));
+
+    if (validCodes.length === 0) {
+      alert("No valid EAN-13 codes.");
+      setLoading(false);
+      return;
+    }
+
+    if (validCodes.length !== uniqueCodes.length) {
+      alert("Some codes were invalid. Only 13-digit EAN allowed.");
+    }
+
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ codes, preset }),
-        },
-      );
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const fullUrl = `${backendUrl}/generate`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+
+      const res = await fetch(fullUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codes: validCodes.join("\n"),
+          preset,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
 
       if (!res.ok) {
         const txt = await res.text();
-        alert("Backend error: " + txt);
-        setLoading(false);
-        return;
+        throw new Error(txt || "Backend error");
       }
 
       const blob = await res.blob();
@@ -48,9 +83,12 @@ export default function Home() {
 
       setToast("PDF ready ✓");
       setTimeout(() => setToast(null), 3000);
-    } catch (err) {
-      alert("Could not connect to backend!");
-      console.error(err);
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        alert("Server is waking up... please try again in a moment.");
+      } else {
+        alert("Something went wrong. Check backend connection.");
+      }
     }
 
     setLoading(false);
@@ -82,21 +120,18 @@ export default function Home() {
           : "bg-zinc-100 text-zinc-900"
       }`}
     >
+      {/* Progress bar */}
+      {loading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-blue-500 animate-pulse z-50" />
+      )}
+
       {/* TOP BAR */}
-      <div
-        className={`w-full max-w-xl flex items-center justify-between px-2 py-2 ${
-          dark ? "text-white" : "text-zinc-800"
-        }`}
-      >
+      <div className="w-full max-w-xl flex items-center justify-between px-2 py-2">
         <div className="flex items-center gap-3 font-semibold">
           📦 <span>EAN Generator</span>
           <a
             href="https://santeripikkarainen.com"
-            className={`ml-3 text-xs px-3 py-1 rounded-full border transition ${
-              dark
-                ? "border-zinc-600 hover:bg-zinc-800"
-                : "border-zinc-300 hover:bg-zinc-200"
-            }`}
+            className="ml-3 text-xs px-3 py-1 rounded-full border border-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition"
           >
             ← Portfolio
           </a>
@@ -104,11 +139,7 @@ export default function Home() {
 
         <button
           onClick={() => setTheme(dark ? "light" : "dark")}
-          className={`px-3 py-1 rounded-lg border ${
-            dark
-              ? "border-zinc-600 hover:bg-zinc-800"
-              : "border-zinc-300 hover:bg-white"
-          }`}
+          className="px-3 py-1 rounded-lg border border-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition"
         >
           {dark ? "☀ Light" : "🌙 Dark"}
         </button>
@@ -116,20 +147,15 @@ export default function Home() {
 
       {/* CARD */}
       <div
-        className={`w-full max-w-xl backdrop-blur rounded-2xl shadow-2xl border p-6 md:p-8 mt-4 transition-colors ${
+        className={`w-full max-w-xl backdrop-blur rounded-2xl shadow-2xl border p-6 md:p-8 mt-4 ${
           dark ? "bg-zinc-900/80 border-zinc-700" : "bg-white border-zinc-300"
         }`}
       >
-        {/* HEADER */}
         <div className="mb-6">
           <h1 className="text-3xl font-semibold tracking-tight">
             EAN Barcode Generator
           </h1>
-          <p
-            className={`text-sm mt-1 ${
-              dark ? "text-zinc-400" : "text-zinc-600"
-            }`}
-          >
+          <p className="text-sm mt-1 opacity-70">
             Generate printable barcode sheets from EAN codes.
           </p>
         </div>
@@ -140,9 +166,7 @@ export default function Home() {
           <select
             value={preset}
             onChange={(e) => setPreset(e.target.value)}
-            className={`w-full rounded-lg border p-2 ${
-              dark ? "bg-zinc-950 border-zinc-700" : "bg-white border-zinc-300"
-            }`}
+            className="w-full rounded-lg border p-2 bg-white dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700"
           >
             <option value="4">A4 – 4 per row (standard)</option>
             <option value="3">A4 – 3 per row (large)</option>
@@ -153,42 +177,20 @@ export default function Home() {
         {/* FILE UPLOAD */}
         <div className="mb-4">
           <label className="block text-sm mb-1">Upload CSV / TXT</label>
-
-          <div className="flex items-center gap-3">
-            <label
-              className={`cursor-pointer px-4 py-2 rounded-lg border text-sm font-medium transition ${
-                dark
-                  ? "bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
-                  : "bg-white border-zinc-300 hover:bg-zinc-100"
-              }`}
-            >
-              Choose file
-              <input
-                type="file"
-                accept=".csv,.txt"
-                className="hidden"
-                onChange={(e) =>
-                  e.target.files && handleFileUpload(e.target.files[0])
-                }
-              />
-            </label>
-
-            <span className="text-xs text-zinc-400">
-              {codes ? "Loaded" : "No file selected"}
-            </span>
-          </div>
+          <input
+            type="file"
+            accept=".csv,.txt"
+            onChange={(e) =>
+              e.target.files && handleFileUpload(e.target.files[0])
+            }
+          />
         </div>
 
         {/* TEXTAREA */}
         <div className="mb-5">
           <label className="block text-sm mb-1">EAN codes (one per line)</label>
           <textarea
-            className={`w-full h-56 rounded-xl border p-3 font-mono text-sm resize-none ${
-              dark ? "bg-zinc-950 border-zinc-700" : "bg-white border-zinc-300"
-            }`}
-            placeholder={`6415712400071
-7340191139510
-6408110004729`}
+            className="w-full h-56 rounded-xl border p-3 font-mono text-sm resize-none bg-white dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700"
             value={codes}
             onChange={(e) => setCodes(e.target.value)}
           />
@@ -198,12 +200,8 @@ export default function Home() {
         <div className="flex gap-3">
           <button
             onClick={generate}
-            disabled={loading}
-            className={`flex-1 py-3 rounded-xl font-medium text-lg flex items-center justify-center gap-2 transition ${
-              dark
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
+            disabled={loading || !codes.trim()}
+            className="flex-1 py-3 rounded-xl font-medium text-lg flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-50"
           >
             {loading && (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -214,25 +212,19 @@ export default function Home() {
           <button
             onClick={clearCodes}
             disabled={loading || !codes}
-            className={`px-4 rounded-xl border ${
-              dark
-                ? "border-zinc-600 hover:bg-zinc-800"
-                : "border-zinc-300 hover:bg-zinc-200"
-            }`}
+            className="px-4 rounded-xl border border-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition"
           >
             Clear
           </button>
         </div>
       </div>
 
-      {/* TOAST */}
       {toast && (
         <div className="fixed bottom-20 bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg">
           {toast}
         </div>
       )}
 
-      {/* FOOTER */}
       <footer className="text-xs text-zinc-500 mt-8">
         © {new Date().getFullYear()} Santeri Pikkarainen
       </footer>
