@@ -5,10 +5,6 @@ A production-ready web application for generating GS1-compliant EAN barcode PDF 
 Built with Next.js 16 + Flask + ReportLab.
 Designed for clean A4 print layouts and reliable barcode scanning.
 
-🚀 Live Demo
-
-👉 https://ean-barcode-generator.onrender.com
-
 ✨ Features
 
 Generate A4 barcode sheets
