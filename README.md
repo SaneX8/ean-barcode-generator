@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📦 EAN Barcode Generator
 
-## Getting Started
+A production-ready web application for generating GS1-compliant EAN
+barcode PDF sheets.
 
-First, run the development server:
+Built with **Next.js 16 + Flask + ReportLab**.\
+Designed for clean A4 print layouts and reliable barcode scanning.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## ✨ Features
+
+- Generate A4 barcode sheets
+- 3 / 4 / 6 barcodes per row
+- GS1-compliant EAN-13 sizing
+- EAN-8 support
+- Optional product name under barcode
+- Automatic name wrapping
+- Duplicate removal
+- Safe backend parsing (invalid lines are ignored)
+- Clean professional print layout
+- Date-based export filename
+
+---
+
+## 📄 Supported Input Formats
+
+### Plain EAN list
+
+    5901234123457
+    7351234567890
+    4006381333931
+    9780201379624
+
+### Product Name + EAN pairs
+
+    Sample Product Alpha
+    5901234123457
+    Demo Item Beta
+    7351234567890
+    Test Product Gamma
+    4006381333931
+
+The parser automatically detects whether a line is: - A valid EAN (8 or
+13 digits) - A product name preceding an EAN
+
+---
+
+## 🖥 Tech Stack
+
+### Frontend
+
+- Next.js 16
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- Flask
+- ReportLab
+- Gunicorn
+
+---
+
+## 📏 Barcode Technical Specs
+
+- X-dimension: 0.42mm
+- Bar height: 20mm
+- Quiet zone enabled
+- Human-readable text enabled
+- Standard-compliant proportions
+
+---
+
+## 📦 Output
+
+- A4 PDF
+- Balanced spacing between items
+- Auto-wrapped product names (max 2 lines)
+- Minimal and print-optimized layout
+- File name format:
+
+```{=html}
+<!-- -->
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+    barcodes_YYYY-MM-DD.pdf
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠 Local Development
 
-## Learn More
+### Install Frontend
 
-To learn more about Next.js, take a look at the following resources:
+    npm install
+    npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Runs at:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    http://localhost:3000
 
-## Deploy on Vercel
+### Install Backend
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    pip install -r requirements.txt
+    python app.py
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Runs at:
+
+    http://localhost:5000
+
+---
+
+## 🌐 Environment Variable
+
+Create `.env.local`:
+
+    NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+
+---
+
+## 🚀 Deployment (Render Example)
+
+Start command:
+
+    gunicorn app:app
+
+Root directory:
+
+    /
+
+---
