@@ -19,32 +19,22 @@ export default function Home() {
 
   async function generate() {
     if (!codes.trim()) {
-      alert("No EAN codes!");
+      alert("No data provided!");
       return;
     }
 
     setLoading(true);
 
-    // Clean + remove empty
-    const cleanedCodes = codes
+    // Siistitään rivit mutta EI validoida numeroita frontendissa
+    const cleanedLines = codes
       .split("\n")
       .map((c) => c.trim())
       .filter(Boolean);
 
-    // Remove duplicates
-    const uniqueCodes = Array.from(new Set(cleanedCodes));
-
-    // Validate EAN-13 (exactly 13 digits)
-    const validCodes = uniqueCodes.filter((code) => /^\d{13}$/.test(code));
-
-    if (validCodes.length === 0) {
-      alert("No valid EAN-13 codes.");
+    if (cleanedLines.length === 0) {
+      alert("No valid lines.");
       setLoading(false);
       return;
-    }
-
-    if (validCodes.length !== uniqueCodes.length) {
-      alert("Some codes were invalid. Only 13-digit EAN allowed.");
     }
 
     try {
@@ -58,7 +48,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          codes: validCodes.join("\n"),
+          codes: cleanedLines.join("\n"), // 🔥 Lähetetään kaikki rivit backendille
           preset,
         }),
         signal: controller.signal,
