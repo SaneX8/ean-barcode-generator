@@ -1,4 +1,5 @@
 import io
+from datetime import datetime
 
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
@@ -22,10 +23,13 @@ CORS(app)
 
 styles = getSampleStyleSheet()
 
+# 🔹 Nimi-tyyli (siistimpi)
 name_style = ParagraphStyle(
     "productname",
     parent=styles["Normal"],
+    fontName="Helvetica",
     fontSize=8,
+    leading=10,
     alignment=1,
 )
 
@@ -41,9 +45,19 @@ BAR_HEIGHT = 20 * mm
 PER_FILE = 50
 
 
-# ------------------------
-# SAFE BARCODE GENERATION
-# ------------------------
+def clean_name(name: str):
+    """
+    🔹 Max 60 chars
+    🔹 Wrap automatically
+    """
+    name = name.strip()
+
+    if len(name) > 60:
+        name = name[:57] + "..."
+
+    return name
+
+
 def make_barcode(code, name=""):
     try:
         if len(code) == 13:
@@ -51,7 +65,7 @@ def make_barcode(code, name=""):
         elif len(code) == 8:
             widget = eanbc.Ean8BarcodeWidget(code)
         else:
-            return None  # invalid length
+            return None
 
         widget.humanReadable = True
         widget.barHeight = BAR_HEIGHT
@@ -69,31 +83,27 @@ def make_barcode(code, name=""):
 
         if name:
             elements.append(Spacer(1, 6))
-            elements.append(Paragraph(name, name_style))
+            elements.append(Paragraph(clean_name(name), name_style))
 
         return elements
 
     except Exception:
-        return None  # never crash PDF
+        return None
 
 
-# ------------------------
-# ROUTE
-# ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
     try:
         data = request.get_json(force=True)
 
         raw = data.get("codes", "")
-        preset_key = data.get("preset", "4")
+        preset_key = data.get("preset", "3")  # 🔥 3 PER ROW DEFAULT
 
         lines = [l.strip() for l in raw.splitlines() if l.strip()]
 
         entries = []
         i = 0
 
-        # Parse name + code pairs
         while i < len(lines):
             current = lines[i]
 
@@ -112,7 +122,7 @@ def generate():
         if not entries:
             return jsonify({"error": "No valid codes"}), 400
 
-        preset = PRESETS.get(preset_key, PRESETS["4"])
+        preset = PRESETS.get(preset_key, PRESETS["3"])
         per_row = preset["per_row"]
         col_width = preset["col_width"]
 
@@ -131,7 +141,8 @@ def generate():
 
         parts = [entries[i:i + PER_FILE] for i in range(0, len(entries), PER_FILE)]
 
-        for idx, part in enumerate(parts, 1):
+        for part in parts:
+
             table_data = []
             row = []
 
@@ -156,25 +167,29 @@ def generate():
                 TableStyle([
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 15),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 15),
-                    ("TOPPADDING", (0, 0), (-1, -1), 15),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 20),
+
+                    # 🔥 ENEMMÄN SPACING
+                    ("LEFTPADDING", (0, 0), (-1, -1), 18),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 18),
+                    ("TOPPADDING", (0, 0), (-1, -1), 20),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 28),
                 ])
             )
 
-            flow.append(Paragraph(f"PART {idx}", styles["Title"]))
-            flow.append(Spacer(1, 10))
             flow.append(table)
+            flow.append(Spacer(1, 15))
 
         doc.build(flow)
         buffer.seek(0)
+
+        # 🔥 DATE IN FILENAME
+        today = datetime.now().strftime("%Y-%m-%d")
 
         return send_file(
             buffer,
             mimetype="application/pdf",
             as_attachment=True,
-            download_name="barcodes.pdf",
+            download_name=f"barcodes_{today}.pdf",
         )
 
     except Exception as e:

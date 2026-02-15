@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [codes, setCodes] = useState("");
-  const [preset, setPreset] = useState("4");
+  const [preset, setPreset] = useState("3");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("light");
